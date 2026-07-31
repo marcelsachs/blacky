@@ -18,6 +18,6 @@ pacstrap -K /mnt base linux linux-firmware-amdgpu linux-firmware-intel linux-fir
   linux-firmware-realtek linux-firmware-whence wireless-regdb openssh iwd
 genfstab -U /mnt >>/mnt/etc/fstab
 
-cp -a "$REPO" /mnt/root/blackwell
-arch-chroot /mnt bash /root/blackwell/chroot.sh || echo "chroot failed; base is on disk" >&2
+cp -a "$REPO" /mnt/root/blacky
+arch-chroot /mnt bash /root/blacky/setup/chroot.sh || echo "chroot failed; base is on disk" >&2
 umount -R /mnt || true
