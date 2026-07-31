@@ -20,7 +20,4 @@ genfstab -U /mnt >>/mnt/etc/fstab
 
 cp -a "$REPO" /mnt/root/blacky
 arch-chroot /mnt bash /root/blacky/setup/chroot.sh || echo "chroot failed; base is on disk" >&2
-# Outside chroot only: host bind-mount of resolv.conf is gone. Point installed system at resolved.
-rm -f /mnt/etc/resolv.conf
-ln -s /run/systemd/resolve/stub-resolv.conf /mnt/etc/resolv.conf
 umount -R /mnt || true
