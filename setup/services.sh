@@ -2,9 +2,8 @@
 set -euo pipefail
 mkdir -p /etc/systemd/network
 systemctl enable systemd-networkd systemd-resolved sshd iwd
-# rm first: ln -sf fails with "same file" if resolv.conf already points at the stub (common in arch-chroot).
-rm -f /etc/resolv.conf
-ln -s /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+# Do not touch /etc/resolv.conf here: arch-chroot bind-mounts the host's
+# resolv.conf, so rm/ln fails with EBUSY. install.sh sets the stub link on /mnt after chroot.
 cat >/etc/systemd/network/20-network.network <<'EOF'
 [Match]
 Type=ether wlan
