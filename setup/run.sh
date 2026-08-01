@@ -2,10 +2,11 @@
 set -euo pipefail
 S="$(cd "$(dirname "$0")" && pwd)"
 for x in \
-  services \
+  network \
+  wifi \
+  bluetooth \
   swap \
   keyboard \
-  wifi \
   user \
   dots \
   c \
@@ -14,6 +15,7 @@ for x in \
   terminal \
   nvidia \
   apps \
+  tailscale \
   grok \
   tinygrad
 do
