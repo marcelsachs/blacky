@@ -10,7 +10,7 @@
 # Notes:
 #   - Programmer + CubeMX are IzPack: use -options (not InstallBuilder --mode unattended).
 #   - Edge AI is Qt Installer Framework (online): install --root … --accept-licenses …
-#   - Both Programmer and CubeMX ship jre/; extract CubeMX last so JRE 21 wins.
+#   - Each zip is extracted into its own work dir — both ship jre/ (8 vs 21) and must not clobber.
 #   - Edge AI has no default packages; we install latest core + STM32 MCU module.
 # PATH: /etc/profile.d/stm.sh  (login shells; source it or add to ~/.bashrc for terminals)
 set -euo pipefail
@@ -30,59 +30,77 @@ install -d "$P"/{progr,cubemx,edgeai}
 cd "$D"
 shopt -s nullglob
 
-# Unzip carefully: Programmer and CubeMX both contain jre/.
-# CubeMX needs JRE ≥17; Programmer ships JRE 8. Extract MX last so its jre wins.
-for z in SetupSTM32CubeProgrammer*.zip; do
-  echo "stm: unzip $z"
-  unzip -qo "$z"
-done
-for z in SetupSTM32CubeMX*.zip stedgeai*.zip; do
-  echo "stm: unzip $z"
-  unzip -qo "$z"
-done
+# Extract zip into a private work dir (keeps each product's bundled JRE isolated).
+unpack() {
+  local zip=$1 dir=$2
+  echo "stm: unzip $zip → $dir"
+  rm -rf "$dir"
+  mkdir -p "$dir"
+  unzip -qo "$zip" -d "$dir"
+}
 
 # IzPack silent install: template → set INSTALL_PATH → -options
 # Always use absolute path: bare filename is not on PATH (cwd is not searched).
+# Run from the product work dir so the wrapper finds ./jre.
 izpack_install() {
   local bin=$1 dest=$2
-  local opts tpl
+  local opts tpl work
   [[ -f $bin ]] || { echo "stm: skip missing $bin"; return 0; }
   chmod +x "$bin"
   bin=$(readlink -f "$bin")
+  work=$(dirname "$bin")
   tpl=$(mktemp /tmp/st-opts.XXXXXX)
   opts=$(mktemp /tmp/st-opts.XXXXXX)
   echo "stm: IzPack install $bin → $dest"
-  # Template is properties-style (# comments + INSTALL_PATH=); not XML.
-  "$bin" -options-template "$tpl" || true
+  (
+    cd "$work"
+    # Template is properties-style (# comments + INSTALL_PATH=); not XML.
+    "$bin" -options-template "$tpl" || true
+  )
   if [[ -s $tpl ]]; then
     sed "s|^INSTALL_PATH=.*|INSTALL_PATH=$dest|" "$tpl" >"$opts"
     grep -q '^INSTALL_PATH=' "$opts" || echo "INSTALL_PATH=$dest" >>"$opts"
   else
     printf '# auto\nINSTALL_PATH=%s\n' "$dest" >"$opts"
   fi
-  "$bin" -options "$opts"
+  (
+    cd "$work"
+    "$bin" -options "$opts"
+  )
   rm -f "$tpl" "$opts"
 }
 
-for s in "$D"/SetupSTM32CubeProgrammer-*.linux; do
-  izpack_install "$s" "$P/progr"
-done
-for s in "$D"/SetupSTM32CubeMX-*; do
-  [[ -f $s && $s != *.zip ]] || continue
-  izpack_install "$s" "$P/cubemx"
+# --- CubeProgrammer (bundled JRE 8) ---
+for z in SetupSTM32CubeProgrammer*.zip; do
+  unpack "$z" "$D/work-progr"
+  for s in "$D"/work-progr/SetupSTM32CubeProgrammer-*.linux; do
+    izpack_install "$s" "$P/progr"
+  done
 done
 
-# Qt Installer Framework (online). Headless needs a non-xcb platform plugin.
-# Default install has zero packages; pin latest core + STM32 MCU (pulls deps).
+# --- CubeMX (bundled JRE 21) ---
+for z in SetupSTM32CubeMX*.zip; do
+  unpack "$z" "$D/work-cubemx"
+  for s in "$D"/work-cubemx/SetupSTM32CubeMX-*; do
+    [[ -f $s && $s != *.zip ]] || continue
+    izpack_install "$s" "$P/cubemx"
+  done
+done
+
+# --- Edge AI: Qt Installer Framework (online). Headless needs non-xcb platform. ---
 edgeai_install() {
-  local bin=$D/stedgeai-linux-onlineinstaller
+  local z bin core
+  for z in stedgeai*.zip; do
+    unpack "$z" "$D/work-edgeai"
+  done
+  bin=$D/work-edgeai/stedgeai-linux-onlineinstaller
+  [[ -f $bin ]] || bin=$D/stedgeai-linux-onlineinstaller
   [[ -f $bin ]] || { echo "stm: skip edgeai (no installer)"; return 0; }
   chmod +x "$bin"
+  bin=$(readlink -f "$bin")
   echo "stm: Edge AI online install → $P/edgeai (needs network)"
   export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-minimal}"
-  # Prefer newest stedgeai0NNN + matching .stm32mcu from the repo catalogue.
   # Catalogue lists name="stedgeai0NNN" and name="stedgeai0NNN.stm32mcu".
-  local core
   core=$("$bin" --accept-messages search 2>/dev/null \
     | grep -oE 'name="stedgeai[0-9]+"' \
     | sed 's/name="//;s/"//' \
