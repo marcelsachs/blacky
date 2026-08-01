@@ -50,7 +50,7 @@ fi
 
 # --- home tree ---
 install -d /sachs
-cp -a "$ROOT/home/." /sachs/
+cp -a "$ROOT/user/." /sachs/
 chown -R sachs:sachs /sachs
 
 # --- services ---

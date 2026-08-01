@@ -4,7 +4,7 @@
 install.sh
 packages/packages.txt
 host/          → /
-home/          → /sachs
+user/          → /sachs
 scripts/configure.sh
 scripts/st.sh tinygrad.sh grok.sh wifi.sh stm.sh
 ```
