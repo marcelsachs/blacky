@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
-# Post-base system configuration. Idempotent-ish.
-# Called from chroot during install, or later as:
+# Post-base config. From ISO (arch-chroot) or later:
 #   sudo bash /sachs/blacky/scripts/configure.sh
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 [[ $(id -u) -eq 0 ]] || { echo "run as root" >&2; exit 1; }
 
-# --- packages (one list, one command) ---
+# first install from ISO often has no root password yet
+if ! passwd -S root 2>/dev/null | grep -q ' P '; then
+  printf 'root:root\n' | chpasswd
+fi
+
+# --- packages ---
 mapfile -t pkgs < <(grep -vE '^\s*(#|$)' "$ROOT/packages/packages.txt")
 pacman -S --needed --noconfirm "${pkgs[@]}"
 

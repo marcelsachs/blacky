@@ -23,6 +23,6 @@ pacstrap -K /mnt base linux \
   genfstab -U /mnt >>/mnt/etc/fstab
 
 cp -a "$REPO" /mnt/root/blacky
-arch-chroot /mnt bash /root/blacky/scripts/chroot.sh || \
-  echo "chroot failed; base is on disk" >&2
+arch-chroot /mnt bash /root/blacky/scripts/configure.sh || \
+  echo "configure failed; base is on disk" >&2
 umount -R /mnt || true
