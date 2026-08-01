@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
-pacman -S --needed --noconfirm i3-wm i3status dmenu ttf-ibm-plex pipewire pipewire-pulse wireplumber
+pacman -S --needed --noconfirm \
+  i3-wm i3status dmenu ttf-ibm-plex \
+  pipewire pipewire-pulse wireplumber
 install -d /sachs/.config/i3 /sachs/.config/i3status
 cat >/sachs/.config/i3/config <<'EOF'
 font pango:IBM Plex Mono 10
@@ -115,4 +117,4 @@ memory {format = " mem: %used "}
 volume master {format = " ♪ %volume " format_muted = " muted (%volume) " device = "default"}
 tztime local {format = " %d.%m.%Y | %H:%M:%S "}
 EOF
-id sachs &>/dev/null && chown -R sachs:sachs /sachs
+chown -R sachs:sachs /sachs
