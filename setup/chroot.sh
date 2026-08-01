@@ -16,6 +16,7 @@ default_uki="/boot/EFI/BOOT/BOOTX64.EFI"
 PRESET
 uuid=$(blkid -s PARTUUID -o value /dev/nvme0n1p2)
 echo "root=PARTUUID=$uuid rw quiet" >/etc/kernel/cmdline
-mkinitcpio -P && bash "$S/run.sh"
+mkinitcpio -P
+bash "$S/run.sh"
 [[ -d /root/blacky && ! -e /sachs/blacky ]] && cp -a /root/blacky /sachs/blacky
 chown -R sachs:sachs /sachs
