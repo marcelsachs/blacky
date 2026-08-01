@@ -8,13 +8,16 @@ for x in \
   swap \
   keyboard \
   user \
-  dots \
+  shell \
+  editor \
+  git \
   c \
   x11 \
   wm \
   terminal \
   nvidia \
-  apps \
+  chromium \
+  obsidian \
   tailscale \
   grok \
   tinygrad
