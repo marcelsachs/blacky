@@ -1,0 +1,5 @@
+[Match]
+Type=ether wlan
+
+[Network]
+DHCP=yes

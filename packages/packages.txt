@@ -1,0 +1,40 @@
+# base desktop + forge
+sudo
+vim
+git
+github-cli
+gcc
+binutils
+make
+pkgconf
+gdb
+patch
+curl
+libx11
+libxft
+xorg-server
+xorg-xinit
+xorg-xrandr
+xorg-xset
+xorg-xinput
+i3-wm
+i3status
+dmenu
+ttf-ibm-plex
+pipewire
+pipewire-pulse
+wireplumber
+nvidia-open
+nvidia-utils
+cuda
+chromium
+obsidian
+tailscale
+bluez
+bluez-utils
+python
+python-pip
+# already pulled by pacstrap in install.sh but harmless if re-listed:
+# openssh iwd — enable only; base may already have them
+openssh
+iwd

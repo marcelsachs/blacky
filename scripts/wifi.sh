@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
+# Optional interactive iwd profile.
 set -euo pipefail
+[[ -t 0 ]] || exit 0
 read -r -p "Wi-Fi auto-connect after reboot? [y/N] " a
 [[ $a =~ ^[Yy]$ ]] || exit 0
 read -r -p "SSID: " s

@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Post-install only. Drop ST Linux zips in /tmp/stm, then:
-#   sudo bash /sachs/blacky/setup/stm.sh
+#   sudo bash /sachs/blacky/scripts/stm.sh
 #
 # Zips (myST login):
 #   SetupSTM32CubeProgrammer_linux_64.zip  → /opt/st/progr

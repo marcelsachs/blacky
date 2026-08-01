@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
+# Clone tinygrad and create a user venv.
 set -euo pipefail
-pacman -S --needed --noconfirm python python-pip
 install -d /sachs
 [[ -d /sachs/tinygrad/.git ]] || \
   git clone https://github.com/tinygrad/tinygrad.git /sachs/tinygrad
