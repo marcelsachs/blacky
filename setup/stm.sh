@@ -7,11 +7,17 @@
 #   SetupSTM32CubeMX-*-Lin-x86_64.zip      → /opt/st/cubemx
 #   stedgeai-lin.zip                       → /opt/st/edgeai  (needs network)
 #
-# PATH: /etc/profile.d/stm.sh
+# Notes:
+#   - Programmer + CubeMX are IzPack: use -options (not InstallBuilder --mode unattended).
+#   - Edge AI is Qt Installer Framework (online): install --root … --accept-licenses …
+#   - Both Programmer and CubeMX ship jre/; extract CubeMX last so JRE 21 wins.
+#   - Edge AI has no default packages; we install latest core + STM32 MCU module.
+# PATH: /etc/profile.d/stm.sh  (login shells; source it or add to ~/.bashrc for terminals)
 set -euo pipefail
 
 D=/tmp/stm
 P=/opt/st
+export LANG="${LANG:-C.UTF-8}"
 
 pacman -S --needed --noconfirm \
   arm-none-eabi-binutils arm-none-eabi-gcc arm-none-eabi-gdb arm-none-eabi-newlib \
@@ -23,25 +29,84 @@ id sachs &>/dev/null && usermod -aG uucp sachs
 install -d "$P"/{progr,cubemx,edgeai}
 cd "$D"
 shopt -s nullglob
-for z in *.zip; do unzip -qo "$z"; done
 
-install_st() {
+# Unzip carefully: Programmer and CubeMX both contain jre/.
+# CubeMX needs JRE ≥17; Programmer ships JRE 8. Extract MX last so its jre wins.
+for z in SetupSTM32CubeProgrammer*.zip; do
+  echo "stm: unzip $z"
+  unzip -qo "$z"
+done
+for z in SetupSTM32CubeMX*.zip stedgeai*.zip; do
+  echo "stm: unzip $z"
+  unzip -qo "$z"
+done
+
+# IzPack silent install: template → set INSTALL_PATH → -options
+# Always use absolute path: bare filename is not on PATH (cwd is not searched).
+izpack_install() {
   local bin=$1 dest=$2
-  [[ -f $bin ]] || return 0
+  local opts tpl
+  [[ -f $bin ]] || { echo "stm: skip missing $bin"; return 0; }
   chmod +x "$bin"
-  "$bin" --mode unattended --unattendedmodeui none --prefix "$dest"
+  bin=$(readlink -f "$bin")
+  tpl=$(mktemp /tmp/st-opts.XXXXXX)
+  opts=$(mktemp /tmp/st-opts.XXXXXX)
+  echo "stm: IzPack install $bin → $dest"
+  # Template is properties-style (# comments + INSTALL_PATH=); not XML.
+  "$bin" -options-template "$tpl" || true
+  if [[ -s $tpl ]]; then
+    sed "s|^INSTALL_PATH=.*|INSTALL_PATH=$dest|" "$tpl" >"$opts"
+    grep -q '^INSTALL_PATH=' "$opts" || echo "INSTALL_PATH=$dest" >>"$opts"
+  else
+    printf '# auto\nINSTALL_PATH=%s\n' "$dest" >"$opts"
+  fi
+  "$bin" -options "$opts"
+  rm -f "$tpl" "$opts"
 }
 
-for s in SetupSTM32CubeProgrammer-*.linux; do install_st "$s" "$P/progr"; done
-for s in SetupSTM32CubeMX-*; do
-  [[ $s == *.zip ]] && continue
-  install_st "$s" "$P/cubemx"
+for s in "$D"/SetupSTM32CubeProgrammer-*.linux; do
+  izpack_install "$s" "$P/progr"
 done
-install_st stedgeai-linux-onlineinstaller "$P/edgeai"
+for s in "$D"/SetupSTM32CubeMX-*; do
+  [[ -f $s && $s != *.zip ]] || continue
+  izpack_install "$s" "$P/cubemx"
+done
 
+# Qt Installer Framework (online). Headless needs a non-xcb platform plugin.
+# Default install has zero packages; pin latest core + STM32 MCU (pulls deps).
+edgeai_install() {
+  local bin=$D/stedgeai-linux-onlineinstaller
+  [[ -f $bin ]] || { echo "stm: skip edgeai (no installer)"; return 0; }
+  chmod +x "$bin"
+  echo "stm: Edge AI online install → $P/edgeai (needs network)"
+  export QT_QPA_PLATFORM="${QT_QPA_PLATFORM:-minimal}"
+  # Prefer newest stedgeai0NNN + matching .stm32mcu from the repo catalogue.
+  # Catalogue lists name="stedgeai0NNN" and name="stedgeai0NNN.stm32mcu".
+  local core
+  core=$("$bin" --accept-messages search 2>/dev/null \
+    | grep -oE 'name="stedgeai[0-9]+"' \
+    | sed 's/name="//;s/"//' \
+    | sort -u | tail -1)
+  core=${core:-stedgeai0400}
+  echo "stm: installing $core ${core}.stm32mcu"
+  "$bin" \
+    --root "$P/edgeai" \
+    --accept-licenses \
+    --accept-messages \
+    --confirm-command \
+    install "$core" "${core}.stm32mcu"
+}
+
+edgeai_install
+
+# PATH: progr CLI, CubeMX launcher, any Edge AI Utilities/linux tree
 cat >/etc/profile.d/stm.sh <<'EOF'
 export PATH="/opt/st/progr/bin:/opt/st/cubemx:$PATH"
 for d in /opt/st/edgeai/*/Utilities/linux /opt/st/edgeai/Utilities/linux; do
   [ -d "$d" ] && PATH="$PATH:$d"
 done
+export PATH
 EOF
+chmod 644 /etc/profile.d/stm.sh
+echo "stm: done — source /etc/profile.d/stm.sh (or re-login) for PATH"
+echo "stm: CubeMX GUI: DISPLAY=:0 STM32CubeMX"
