@@ -48,7 +48,7 @@ if [[ ! -f /sachs/.blacky-user-ok ]]; then
   touch /sachs/.blacky-user-ok
 fi
 
-# --- home tree ---
+# --- user tree ---
 install -d /sachs
 cp -a "$ROOT/user/." /sachs/
 chown -R sachs:sachs /sachs
